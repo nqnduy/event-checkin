@@ -8,11 +8,8 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import {
 	Download,
-	Users,
-	Calendar,
 	Plus,
 	RefreshCw,
-	Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { CreateEventModal } from "@/components/admin/CreateEventModal";
@@ -35,16 +32,22 @@ interface CheckinData {
 interface AdminDashboardClientProps {
 	initialData: CheckinData[];
 	initialEvents: Event[];
+	initialStats: {
+		total_checkins: number;
+		today_checkins: number;
+		last_hour_checkins: number;
+	};
 }
 
 export default function AdminDashboardClient({
 	initialData,
 	initialEvents,
+	initialStats,
 }: AdminDashboardClientProps) {
 	const [checkins, setCheckins] = useState(initialData);
 	const [events, setEvents] = useState(initialEvents);
 	const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-	const [eventStats, setEventStats] = useState<EventStats | null>(null);
+	const [eventStats, setEventStats] = useState<EventStats | null>(initialStats as unknown as EventStats);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	// Modal states
@@ -90,7 +93,7 @@ export default function AdminDashboardClient({
 		return () => {
 			supabase.removeChannel(channel);
 		};
-	}, [selectedEventId]);
+	}, [selectedEventId, supabase]);
 
 	// Load events
 	const loadEvents = async () => {
@@ -143,7 +146,7 @@ export default function AdminDashboardClient({
 				.rpc("get_event_stats", { p_event_id: selectedEventId })
 				.single();
 
-			if (data) setEventStats(data);
+			if (data) setEventStats(data as EventStats);
 		}
 	};
 
@@ -404,37 +407,3 @@ export default function AdminDashboardClient({
 	);
 }
 
-// Stat Card Component (reused from original)
-function StatCard({
-	title,
-	value,
-	icon,
-	color,
-}: {
-	title: string;
-	value: number;
-	icon: React.ReactNode;
-	color: "blue" | "green" | "purple";
-}) {
-	const colorClasses = {
-		blue: "bg-blue-100 text-blue-600",
-		green: "bg-green-100 text-green-600",
-		purple: "bg-purple-100 text-purple-600",
-	};
-
-	return (
-		<div className="bg-white rounded-xl shadow-sm p-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<p className="text-sm font-medium text-gray-600">{title}</p>
-					<p className="text-3xl font-bold text-gray-900 mt-2">
-						{value.toLocaleString()}
-					</p>
-				</div>
-				<div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-					{icon}
-				</div>
-			</div>
-		</div>
-	);
-}

@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
-import { Download, Printer, ArrowLeft, Calendar, Target, Users } from "lucide-react";
+import { Download, Printer, Calendar, Target } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { Event } from "@/types/event";
 
 export default function EventQRPage() {
 	const params = useParams();
@@ -14,7 +15,7 @@ export default function EventQRPage() {
     const slug = params.slug as string;
     console.log(slug)
 
-	const [eventInfo, setEventInfo] = useState<any>(null);
+	const [eventInfo, setEventInfo] = useState<Event | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const supabase = createClient();
 

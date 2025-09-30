@@ -3,6 +3,7 @@ export interface Event {
   id: number
   event_name: string
   event_date: string
+  slug: string
   target_checkins: number
   description?: string
   status: 'active' | 'completed' | 'cancelled'

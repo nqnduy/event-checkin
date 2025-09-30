@@ -70,7 +70,7 @@ export default function ExternalDashboardClient({
 		return () => {
 			supabase.removeChannel(channel);
 		};
-	}, []);
+	}, [supabase]);
 
 	// Decrypt and mask data for display
 	const getMaskedData = (encrypted_name: string, encrypted_phone: string) => {
@@ -104,7 +104,7 @@ export default function ExternalDashboardClient({
 				.rpc("get_checkin_stats")
 				.single();
 
-			if (newStats) setStats(newStats);
+			if (newStats) setStats(newStats as Stats);
 
 			toast.success("Dữ liệu đã được cập nhật");
 		} catch (error) {

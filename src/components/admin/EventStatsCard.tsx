@@ -42,7 +42,7 @@ export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
 						<Users className="w-8 h-8 text-blue-600" />
 					</div>
 					<p className="text-2xl font-bold text-gray-900">
-						{stats.total_checkins.toLocaleString()}
+						{stats.total_checkins?.toLocaleString()}
 					</p>
 					<p className="text-sm text-gray-500">Đã check-in</p>
 				</div>
@@ -53,7 +53,7 @@ export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
 						<Target className="w-8 h-8 text-purple-600" />
 					</div>
 					<p className="text-2xl font-bold text-gray-900">
-						{stats.target_checkins.toLocaleString()}
+						{stats.target_checkins?.toLocaleString()}
 					</p>
 					<p className="text-sm text-gray-500">Target</p>
 				</div>

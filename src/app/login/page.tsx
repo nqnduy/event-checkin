@@ -76,9 +76,10 @@ export default function LoginPage() {
 			} else {
 				throw new Error(`Unknown role: ${userData?.role}`);
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
+			const errorMessage = error instanceof Error ? error.message : "Đăng nhập thất bại";
 			console.error("Login error:", error);
-			toast.error(error.message || "Đăng nhập thất bại");
+			toast.error(errorMessage || "Đăng nhập thất bại");
 		} finally {
 			setIsLoading(false);
 		}
@@ -101,7 +102,7 @@ export default function LoginPage() {
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
 							required
-							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+							className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
 							placeholder="admin@example.com"
 						/>
 					</div>
@@ -115,7 +116,7 @@ export default function LoginPage() {
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
 							required
-							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+							className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
 						/>
 					</div>
 

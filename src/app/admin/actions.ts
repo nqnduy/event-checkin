@@ -121,7 +121,7 @@ export async function updateCheckin(
 	}
 
 	// Update với encryption mới nếu cần
-	const updates: any = {};
+	const updates: Record<string, string | null> = {};
 
 	if (data.full_name) {
 		updates.full_name = data.full_name;

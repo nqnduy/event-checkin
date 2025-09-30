@@ -34,7 +34,7 @@ export function parseEventSlug(
 	const match = slug.match(/(.+)-(\d{8})$/);
 	if (!match) return null;
 
-	const [_, nameSlug, dateStr] = match;
+	const [/* full match */, nameSlug, dateStr] = match;
 	const day = dateStr.substring(0, 2);
 	const month = dateStr.substring(2, 4);
 	const year = dateStr.substring(4, 8);

@@ -9,6 +9,7 @@ import { encryptData } from "@/lib/encryption";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
+import { Event } from "@/types/event";
 
 export default function EventCheckinPage() {
 	const params = useParams();
@@ -16,7 +17,7 @@ export default function EventCheckinPage() {
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
-	const [eventInfo, setEventInfo] = useState<any>(null);
+	const [eventInfo, setEventInfo] = useState<Event | null>(null);
 	const supabase = createClient();
 
 	const {
@@ -69,7 +70,7 @@ export default function EventCheckinPage() {
 		if (slug && slug !== "default") {
 			loadEvent();
 		}
-	}, [slug]);
+	}, [slug, supabase]);
 
 	const onSubmit = async (data: CheckinFormData) => {
 		setIsSubmitting(true);
@@ -85,7 +86,7 @@ export default function EventCheckinPage() {
 				encrypted_name: encryptedName,
 				encrypted_phone: encryptedPhone,
 				terms_accepted: data.terms_accepted,
-				event_id: eventInfo.id ? parseInt(eventInfo.id) : null,
+				event_id: eventInfo?.id ? parseInt(eventInfo.id.toString()) : null,
 				ip_address: ipAddress,
 				user_agent: navigator.userAgent,
 			});

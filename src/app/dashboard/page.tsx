@@ -16,9 +16,9 @@ export default async function ExternalDashboard() {
 		.from("event_checkins")
 		.select("id, encrypted_name, encrypted_phone, checked_in_at")
 		.order("checked_in_at", { ascending: false })
-		.limit(100);
+		.limit(500);
 
-	const { data: stats } = await supabase.rpc("get_checkin_stats").single();
+	const { data: stats } = await supabase.rpc("get_checkin_stats");
 
 	return (
 		<ExternalDashboardClient

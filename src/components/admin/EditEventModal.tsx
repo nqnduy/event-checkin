@@ -7,7 +7,6 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { X, Calendar, Target, FileText } from "lucide-react";
-import { format } from "date-fns";
 import { Event } from "@/types/event";
 
 const editEventSchema = z.object({
@@ -43,7 +42,6 @@ export function EditEventModal({
 		register,
 		handleSubmit,
 		formState: { errors },
-		reset,
 		setValue,
 	} = useForm<EditEventFormData>({
 		resolver: zodResolver(editEventSchema),

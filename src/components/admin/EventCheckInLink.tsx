@@ -20,7 +20,6 @@ export function EventCheckInLink({ eventId, eventName, eventSlug }: EventCheckIn
   const checkInUrl = (eventId && eventSlug)
     ? `${baseUrl}/checkin/${eventSlug}`
     : `${baseUrl}/checkin`
-  console.log(checkInUrl)
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(checkInUrl)
