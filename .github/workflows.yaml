@@ -1,0 +1,19 @@
+name: Keep Supabase Active
+on:
+  schedule:
+    # Chạy mỗi 3 ngày lúc 9:00 AM UTC
+    - cron: '0 9 */3 * *'
+  workflow_dispatch: # Cho phép chạy manual
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database
+        run: |
+          curl --request GET \
+            --url '${{ secrets.SUPABASE_URL }}/rest/v1/event_checkins?select=count&limit=1' \
+            --header 'apikey: ${{ secrets.SUPABASE_ANON_KEY }}' \
+            --header 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}'
+
+          echo "✅ Database pinged at $(date)"
