@@ -13,7 +13,6 @@ export default function EventQRPage() {
 	const params = useParams();
 	const router = useRouter();
     const slug = params.slug as string;
-    console.log(slug)
 
 	const [eventInfo, setEventInfo] = useState<Event | null>(null);
 	const [isLoading, setIsLoading] = useState(true);

@@ -1,4 +1,3 @@
-// src/app/dashboard/ExternalDashboardClient.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,34 +7,47 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { Download, Users, Calendar, Shield, RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { Event, EventStats } from "@/types/event";
+import { EventStatsCard } from "@/components/admin/EventStatsCard";
+import { EventFilter } from "@/components/admin/EventFilter";
 
 interface EncryptedCheckinData {
 	id: number;
 	encrypted_name: string;
 	encrypted_phone: string;
 	checked_in_at: string;
+	terms_accepted: boolean;
+	event_id?: number;
 }
-
-interface Stats {
-	total_checkins: number;
-	today_checkins: number;
-	last_hour_checkins: number;
+interface ExternalDashboardClientProps {
+	initialData: EncryptedCheckinData[];
+	initialEvents: Event[];
+	initialStats: {
+		total_checkins: number;
+		today_checkins: number;
+		last_hour_checkins: number;
+	};
 }
 
 export default function ExternalDashboardClient({
 	initialData,
+	initialEvents,
 	initialStats,
-}: {
-	initialData: EncryptedCheckinData[];
-	initialStats: Stats;
-}) {
+}: ExternalDashboardClientProps) {
 	const [checkins, setCheckins] = useState(initialData);
-	const [stats, setStats] = useState(initialStats);
-	const [dateFilter, setDateFilter] = useState("");
+	const [events, setEvents] = useState(initialEvents);
+	const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+	const [eventStats, setEventStats] = useState<EventStats | null>(initialStats as unknown as EventStats);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+
 	const supabase = createClient();
+
+	// Load event stats when selected event changes
+	useEffect(() => {
+		loadEventStats();
+	}, [selectedEventId]);
 
 	// Real-time subscription
 	useEffect(() => {
@@ -49,19 +61,17 @@ export default function ExternalDashboardClient({
 					table: "event_checkins",
 				},
 				(payload) => {
-					const newCheckin = {
-						id: payload.new.id,
-						encrypted_name: payload.new.encrypted_name,
-						encrypted_phone: payload.new.encrypted_phone,
-						checked_in_at: payload.new.checked_in_at,
-					} as EncryptedCheckinData;
-
+					const newCheckin = payload.new as EncryptedCheckinData;
 					setCheckins((prev) => [newCheckin, ...prev]);
-					setStats((prev) => ({
-						total_checkins: prev.total_checkins + 1,
-						today_checkins: prev.today_checkins + 1,
-						last_hour_checkins: prev.last_hour_checkins + 1,
-					}));
+
+					// Update stats if new checkin is for selected event
+					if (
+						!selectedEventId ||
+						newCheckin.event_id === selectedEventId
+					) {
+						loadEventStats();
+					}
+
 					toast.success("Có check-in mới!");
 				}
 			)
@@ -70,7 +80,7 @@ export default function ExternalDashboardClient({
 		return () => {
 			supabase.removeChannel(channel);
 		};
-	}, [supabase]);
+	}, [selectedEventId, supabase]);
 
 	// Decrypt and mask data for display
 	const getMaskedData = (encrypted_name: string, encrypted_phone: string) => {
@@ -89,22 +99,84 @@ export default function ExternalDashboardClient({
 		}
 	};
 
+	// Filter by date
+	const filteredCheckins = selectedEventId
+		? checkins.filter((c) => c.event_id === selectedEventId)
+		: checkins;
+
+	const loadEvents = async () => {
+		const { data } = await supabase
+			.from("events")
+			.select("*")
+			.order("event_date", { ascending: false });
+
+		if (data) setEvents(data);
+	};
+
+	// Load event statistics
+	const loadEventStats = async () => {
+		if (!selectedEventId) {
+			// Load overall stats if no event selected
+			const { data } = await supabase.rpc("get_event_stats");
+			if (data && data.length > 0) {
+				// Aggregate all events stats
+				const totalStats: EventStats = {
+					event_id: 0,
+					event_name: "Tất cả Events",
+					total_checkins: data.reduce(
+						(sum: number, e: EventStats) =>
+							sum + Number(e.total_checkins),
+						0
+					),
+					target_checkins: data.reduce(
+						(sum: number, e: EventStats) => sum + e.target_checkins,
+						0
+					),
+					completion_percentage: 0,
+					today_checkins: data.reduce(
+						(sum: number, e: EventStats) =>
+							sum + Number(e.today_checkins),
+						0
+					),
+				};
+
+				if (totalStats.target_checkins > 0) {
+					totalStats.completion_percentage =
+						(totalStats.total_checkins /
+							totalStats.target_checkins) *
+						100;
+				}
+				setEventStats(totalStats);
+			}
+		} else {
+			// Load specific event stats
+			const { data } = await supabase
+				.rpc("get_event_stats", { p_event_id: selectedEventId })
+				.single();
+
+			if (data) setEventStats(data as EventStats);
+		}
+	};
+
 	// Manual refresh
 	const handleRefresh = async () => {
 		setIsRefreshing(true);
 		try {
-			const { data } = await supabase
+			let query = supabase
 				.from("event_checkins")
-				.select("id, encrypted_name, encrypted_phone, checked_in_at")
+				.select("id, encrypted_name, encrypted_phone, event_id, terms_accepted, checked_in_at")
 				.order("checked_in_at", { ascending: false });
 
+			if (selectedEventId) {
+				query = query.eq("event_id", selectedEventId);
+			}
+
+			const { data } = await query;
 			if (data) setCheckins(data);
 
-			const { data: newStats } = await supabase
-				.rpc("get_checkin_stats")
-				.single();
-
-			if (newStats) setStats(newStats as Stats);
+			// Reload events and stats
+			await loadEvents();
+			await loadEventStats();
 
 			toast.success("Dữ liệu đã được cập nhật");
 		} catch (error) {
@@ -114,17 +186,10 @@ export default function ExternalDashboardClient({
 		}
 	};
 
-	// Filter by date
-	const filteredCheckins = dateFilter
-		? checkins.filter(
-				(c) =>
-					new Date(c.checked_in_at).toDateString() ===
-					new Date(dateFilter).toDateString()
-		  )
-		: checkins;
-
 	// Export masked data to Excel
 	const exportToExcel = () => {
+		const selectedEvent = events.find((e) => e.id === selectedEventId);
+
 		const exportData = filteredCheckins.map((item, index) => {
 			const { maskedName, maskedPhone } = getMaskedData(
 				item.encrypted_name,
@@ -139,19 +204,42 @@ export default function ExternalDashboardClient({
 					"dd/MM/yyyy HH:mm:ss",
 					{ locale: vi }
 				),
+				"Đã đồng ý điều khoản": item.terms_accepted ? "Có" : "Không",
 			};
 		});
 
 		const ws = XLSX.utils.json_to_sheet(exportData);
 		const wb = XLSX.utils.book_new();
+
+		if (eventStats) {
+			const summaryData = [
+				{
+					Event: eventStats.event_name,
+					"Tổng check-in": eventStats.total_checkins,
+					Target: eventStats.target_checkins,
+					"Đạt được (%)": eventStats.completion_percentage.toFixed(2),
+					"Check-in hôm nay": eventStats.today_checkins,
+					"Ngày export": format(new Date(), "dd/MM/yyyy HH:mm:ss", {
+						locale: vi,
+					}),
+				},
+			];
+
+			const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+			XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
+		}
+
 		XLSX.utils.book_append_sheet(wb, ws, "Check-ins (Masked)");
 
 		ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 20 }, { wch: 20 }];
 
-		const fileName = `checkins_masked_${format(
-			new Date(),
-			"yyyy-MM-dd_HH-mm-ss"
-		)}.xlsx`;
+		const fileName = selectedEvent
+			? `checkins_masked${selectedEvent.event_name.replace(
+					/\s+/g,
+					"_"
+				)}_${format(new Date(), "yyyy-MM-dd")}.xlsx`
+			: `checkins_all_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+
 		const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
 		const blob = new Blob([excelBuffer], {
 			type: "application/octet-stream",
@@ -164,11 +252,11 @@ export default function ExternalDashboardClient({
 	return (
 		<div className="min-h-screen bg-gray-50 p-6">
 			<div className="max-w-7xl mx-auto">
-				{/* Header with Privacy Notice */}
+				{/* Header */}
 				<div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-					<div className="flex justify-between items-center mb-4">
+					<div className="flex justify-between items-center gap-4 flex-col md:flex-row">
 						<h1 className="text-3xl font-bold text-gray-800">
-							Dashboard - External User
+							External Dashboard
 						</h1>
 						<div className="flex gap-3">
 							<button
@@ -176,7 +264,7 @@ export default function ExternalDashboardClient({
 								disabled={isRefreshing}
 								className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
 								<RefreshCw
-									className={`w-4 h-4 ${
+									className={`w-4 h-4 hidden md:block ${
 										isRefreshing ? "animate-spin" : ""
 									}`}
 								/>
@@ -185,98 +273,34 @@ export default function ExternalDashboardClient({
 							<button
 								onClick={exportToExcel}
 								className="px-4 py-2 cursor-pointer bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
-								<Download className="w-4 h-4" />
+								<Download className="w-4 h-4 hidden md:block" />
 								Export Excel
 							</button>
 						</div>
 					</div>
-
-					{/* Privacy Notice */}
-					<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-						<div className="flex items-center gap-2">
-							<Shield className="w-5 h-5 text-blue-600" />
-							<p className="text-sm text-blue-800">
-								<strong>Bảo mật dữ liệu:</strong> Thông tin cá
-								nhân đã được mã hóa để bảo vệ quyền riêng tư.
-							</p>
+				</div>
+				<div className="grid grid-cols-1 gap-1 md:grid-cols-2 md:gap-6">
+					{/* Filter */}
+					<div className="bg-white rounded-xl shadow-sm p-4 mb-2 md:mb-6">
+						<div className="">
+							<div className="mb-6">
+								<EventFilter
+									events={events}
+									selectedEventId={selectedEventId}
+									onEventSelect={setSelectedEventId}
+								/>
+							</div>
 						</div>
 					</div>
+					{/* Event Statistics */}
+					{eventStats && (
+						<div className="mb-6">
+							<EventStatsCard stats={eventStats} />
+						</div>
+					)}
 				</div>
 
-				{/* Statistics Cards */}
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-					<div className="bg-white rounded-xl shadow-sm p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium text-gray-600">
-									Tổng số check-in
-								</p>
-								<p className="text-3xl font-bold text-gray-900 mt-2">
-									{stats.total_checkins.toLocaleString()}
-								</p>
-							</div>
-							<div className="p-3 rounded-lg bg-blue-100">
-								<Users className="w-6 h-6 text-blue-600" />
-							</div>
-						</div>
-					</div>
-
-					<div className="bg-white rounded-xl shadow-sm p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium text-gray-600">
-									Check-in hôm nay
-								</p>
-								<p className="text-3xl font-bold text-gray-900 mt-2">
-									{stats.today_checkins.toLocaleString()}
-								</p>
-							</div>
-							<div className="p-3 rounded-lg bg-green-100">
-								<Calendar className="w-6 h-6 text-green-600" />
-							</div>
-						</div>
-					</div>
-
-					<div className="bg-white rounded-xl shadow-sm p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium text-gray-600">
-									Dữ liệu được bảo vệ
-								</p>
-								<p className="text-3xl font-bold text-gray-900 mt-2">
-									100%
-								</p>
-							</div>
-							<div className="p-3 rounded-lg bg-purple-100">
-								<Shield className="w-6 h-6 text-purple-600" />
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* Filter */}
-				<div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-					<div className="flex items-center gap-4">
-						<label className="font-medium text-gray-700">
-							Lọc theo ngày:
-						</label>
-						<input
-							type="date"
-							value={dateFilter}
-							onChange={(e) => setDateFilter(e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-						/>
-						{dateFilter && (
-							<button
-								onClick={() => setDateFilter("")}
-								className="px-3 py-2 cursor-pointer text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-								Xóa bộ lọc
-							</button>
-						)}
-					</div>
-				</div>
-
-				{/* Masked Data Table */}
+				{/* Data Table */}
 				<div className="bg-white rounded-xl shadow-sm overflow-hidden">
 					<div className="overflow-x-auto">
 						<table className="w-full">
@@ -294,16 +318,21 @@ export default function ExternalDashboardClient({
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										Số điện thoại (đã mã hóa)
 									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										Event
+									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200">
 								{filteredCheckins.map((checkin, index) => {
+									const event = events.find(
+										(e) => e.id === checkin.event_id
+									);
 									const { maskedName, maskedPhone } =
 										getMaskedData(
 											checkin.encrypted_name,
 											checkin.encrypted_phone
 										);
-
 									return (
 										<tr
 											key={checkin.id}
@@ -326,6 +355,15 @@ export default function ExternalDashboardClient({
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
 												{maskedPhone}
 											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+												{event ? (
+													<span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+														{event.event_name}
+													</span>
+												) : (
+													"N/A"
+												)}
+											</td>
 										</tr>
 									);
 								})}
@@ -334,7 +372,9 @@ export default function ExternalDashboardClient({
 
 						{filteredCheckins.length === 0 && (
 							<div className="text-center py-8 text-gray-500">
-								Chưa có dữ liệu check-in
+								{selectedEventId
+									? "Chưa có check-in cho event này"
+									: "Chưa có dữ liệu check-in"}
 							</div>
 						)}
 					</div>

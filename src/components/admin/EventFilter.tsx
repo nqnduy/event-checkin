@@ -11,7 +11,7 @@ interface EventFilterProps {
 	events: Event[];
 	selectedEventId: number | null;
 	onEventSelect: (eventId: number | null) => void;
-	onEditEvent: (event: Event) => void;
+	onEditEvent?: (event: Event) => void;
 }
 
 export function EventFilter({
@@ -84,16 +84,18 @@ export function EventFilter({
 							</div>
 
 							{/* Edit button - Đổi từ button thành div với role="button" */}
-							<div
-								role="button"
-								onClick={(e) => {
-									e.stopPropagation(); // Ngăn trigger event select
-									onEditEvent(event);
-								}}
-								className="ml-2 p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-								aria-label="Edit event">
-								<Edit2 className="w-4 h-4 text-gray-600" />
-							</div>
+							{onEditEvent && (
+								<div
+									role="button"
+									onClick={(e) => {
+										e.stopPropagation(); // Ngăn trigger event select
+										onEditEvent(event);
+									}}
+									className="ml-2 p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+									aria-label="Edit event">
+									<Edit2 className="w-4 h-4 text-gray-600" />
+								</div>
+							)}
 						</div>
 					))}
 				</div>
