@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://event-checkin-2025.vercel.app/sitemap.xml
