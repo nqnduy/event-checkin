@@ -40,7 +40,7 @@ export default function EventCheckinPage() {
 	const [isSuccess, setIsSuccess] = useState(false);
 	const [eventInfo, setEventInfo] = useState<Event | null>(null);
 	const [isCheckingStatus, setIsCheckingStatus] = useState(true);
-	const [existingCheckin, setExistingCheckin] = useState<any>(null);
+	const [existingCheckin, setExistingCheckin] = useState<Record<string, unknown> | null>(null);
 	const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
 	const supabase = createClient();
@@ -157,7 +157,7 @@ export default function EventCheckinPage() {
 		if (slug && slug !== "default") {
 			loadEventAndCheckStatus();
 		}
-	}, [slug, supabase]);
+	}, [slug, supabase, checkExistingCheckin]);
 
 	const onSubmit = async (data: CheckinFormData) => {
 		setIsSubmitting(true);
@@ -200,14 +200,14 @@ export default function EventCheckinPage() {
 			toast.success("Đăng ký thành công!");
 			reset();
 
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error("Đăng ký error:", error);
 
-			if (error.code === '23505') {
+			if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') {
 				toast.info("Bạn đã đăng ký rồi!");
 				setIsSuccess(true);
 			} else {
-				toast.error("Có lỗi xảy ra, vui lòng thử lại");
+				toast.error("Có lỗi xảy ra, vui lòng thử lại sau");
 			}
 		} finally {
 			setIsSubmitting(false);

@@ -179,7 +179,7 @@ export default function ExternalDashboardClient({
 			await loadEventStats();
 
 			toast.success("Dữ liệu đã được cập nhật");
-		} catch (error) {
+		} catch (_) {
 			toast.error("Lỗi khi tải dữ liệu");
 		} finally {
 			setIsRefreshing(false);

@@ -172,7 +172,7 @@ export default function AdminDashboardClient({
 			await loadEventStats();
 
 			toast.success("Dữ liệu đã được cập nhật");
-		} catch (error) {
+		} catch (_) {
 			toast.error("Lỗi khi tải dữ liệu");
 		} finally {
 			setIsRefreshing(false);
@@ -229,7 +229,7 @@ export default function AdminDashboardClient({
 			? `checkins_${selectedEvent.event_name.replace(
 					/\s+/g,
 					"_"
-			  )}_${format(new Date(), "yyyy-MM-dd")}.xlsx`
+				)}_${format(new Date(), "yyyy-MM-dd")}.xlsx`
 			: `checkins_all_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
 
 		const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });

@@ -26,7 +26,7 @@ export function EventCheckInLink({ eventId, eventName, eventSlug }: EventCheckIn
       setCopied(true)
       toast.success('Link đã được copy!')
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch (_) {
       toast.error('Không thể copy link')
     }
   }
