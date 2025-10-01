@@ -157,7 +157,7 @@ export default function EventCheckinPage() {
 		if (slug && slug !== "default") {
 			loadEventAndCheckStatus();
 		}
-	}, [slug, supabase, checkExistingCheckin]);
+	}, [slug, supabase]);
 
 	const onSubmit = async (data: CheckinFormData) => {
 		setIsSubmitting(true);
