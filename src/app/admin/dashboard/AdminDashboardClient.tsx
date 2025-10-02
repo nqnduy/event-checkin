@@ -59,11 +59,23 @@ export default function AdminDashboardClient({
 
 	// Load event stats when selected event changes
 	useEffect(() => {
-		loadEventStats();
+		let isMounted = true;
+		const fetchStats = async () => {
+			if (isMounted) {
+				await loadEventStats();
+			}
+		};
+
+		fetchStats();
+
+		return () => {
+			isMounted = false;
+		};
 	}, [selectedEventId]);
 
 	// Real-time subscription
 	useEffect(() => {
+		let isMounted = true;
 		const channel = supabase
 			.channel("admin-checkins")
 			.on(
@@ -74,6 +86,8 @@ export default function AdminDashboardClient({
 					table: "event_checkins",
 				},
 				(payload) => {
+					if (!isMounted) return;
+
 					const newCheckin = payload.new as CheckinData;
 					setCheckins((prev) => [newCheckin, ...prev]);
 
@@ -91,6 +105,7 @@ export default function AdminDashboardClient({
 			.subscribe();
 
 		return () => {
+			isMounted = false;
 			supabase.removeChannel(channel);
 		};
 	}, [selectedEventId, supabase]);
@@ -107,52 +122,68 @@ export default function AdminDashboardClient({
 
 	// Load event statistics
 	const loadEventStats = async () => {
-		if (!selectedEventId) {
-			// Load overall stats if no event selected
-			const { data } = await supabase.rpc("get_event_stats");
-			if (data && data.length > 0) {
-				// Aggregate all events stats
-				const totalStats: EventStats = {
-					event_id: 0,
-					event_name: "Tất cả Events",
-					total_checkins: data.reduce(
-						(sum: number, e: EventStats) =>
-							sum + Number(e.total_checkins),
-						0
-					),
-					target_checkins: data.reduce(
-						(sum: number, e: EventStats) => sum + e.target_checkins,
-						0
-					),
-					completion_percentage: 0,
-					today_checkins: data.reduce(
-						(sum: number, e: EventStats) =>
-							sum + Number(e.today_checkins),
-						0
-					),
-				};
-
-				if (totalStats.target_checkins > 0) {
-					totalStats.completion_percentage =
-						(totalStats.total_checkins /
-							totalStats.target_checkins) *
-						100;
+		try {
+			if (!selectedEventId) {
+				// Load overall stats if no event selected
+				const { data, error } = await supabase.rpc("get_event_stats");
+				if (error) {
+					console.error("Error loading event stats:", error);
+					return;
 				}
-				setEventStats(totalStats);
-			}
-		} else {
-			// Load specific event stats
-			const { data } = await supabase
-				.rpc("get_event_stats", { p_event_id: selectedEventId })
-				.single();
 
-			if (data) setEventStats(data as EventStats);
+				if (data && data.length > 0) {
+					// Aggregate all events stats
+					const totalStats: EventStats = {
+						event_id: 0,
+						event_name: "Tất cả Events",
+						total_checkins: data.reduce(
+							(sum: number, e: EventStats) =>
+								sum + Number(e.total_checkins),
+							0
+						),
+						target_checkins: data.reduce(
+							(sum: number, e: EventStats) => sum + e.target_checkins,
+							0
+						),
+						completion_percentage: 0,
+						today_checkins: data.reduce(
+							(sum: number, e: EventStats) =>
+								sum + Number(e.today_checkins),
+							0
+						),
+					};
+
+					if (totalStats.target_checkins > 0) {
+						totalStats.completion_percentage =
+							(totalStats.total_checkins /
+								totalStats.target_checkins) *
+							100;
+					}
+					setEventStats(totalStats);
+				}
+			} else {
+				// Load specific event stats
+				const { data, error } = await supabase
+					.rpc("get_event_stats", { p_event_id: selectedEventId })
+					.single();
+
+				if (error) {
+					console.error("Error loading specific event stats:", error);
+					return;
+				}
+
+				if (data) setEventStats(data as EventStats);
+			}
+		} catch (error) {
+			console.error("Unexpected error in loadEventStats:", error);
 		}
 	};
 
 	// Manual refresh
 	const handleRefresh = async () => {
+		let isMounted = true;
 		setIsRefreshing(true);
+
 		try {
 			// Reload checkins
 			let query = supabase
@@ -164,19 +195,32 @@ export default function AdminDashboardClient({
 				query = query.eq("event_id", selectedEventId);
 			}
 
-			const { data } = await query;
-			if (data) setCheckins(data);
+			const { data, error } = await query;
+
+			if (error) {
+				console.error("Error loading checkins:", error);
+				if (isMounted) toast.error("Lỗi khi tải dữ liệu check-in");
+				return;
+			}
+
+			if (data && isMounted) setCheckins(data);
 
 			// Reload events and stats
-			await loadEvents();
-			await loadEventStats();
-
-			toast.success("Dữ liệu đã được cập nhật");
-		} catch (_) {
-			toast.error("Lỗi khi tải dữ liệu");
+			if (isMounted) {
+				await loadEvents();
+				await loadEventStats();
+				toast.success("Dữ liệu đã được cập nhật");
+			}
+		} catch (error) {
+			console.error("Unexpected error in handleRefresh:", error);
+			if (isMounted) toast.error("Lỗi khi tải dữ liệu");
 		} finally {
-			setIsRefreshing(false);
+			if (isMounted) setIsRefreshing(false);
 		}
+
+		return () => {
+			isMounted = false;
+		};
 	};
 
 	// Filter checkins by selected event
