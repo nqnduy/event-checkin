@@ -136,11 +136,6 @@ export default function LoginPage() {
 						)}
 					</button>
 				</form>
-
-				{/* Debug info - xóa khi production */}
-				<div className="mt-4 p-4 bg-gray-100 rounded text-xs text-gray-600">
-					<p>Debug: Check console for logs</p>
-				</div>
 			</div>
 		</div>
 	);
