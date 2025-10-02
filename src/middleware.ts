@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
+	const { pathname } = request.nextUrl
 	const response = NextResponse.next({
 		request: {
 			headers: request.headers,
@@ -40,7 +41,7 @@ export async function middleware(request: NextRequest) {
 	} = await supabase.auth.getUser();
 
 	// Protected routes
-	if (request.nextUrl.pathname.startsWith("/admin")) {
+	if (pathname.startsWith("/admin")) {
 		if (!user) {
 			return NextResponse.redirect(new URL("/login", request.url));
 		}
@@ -58,9 +59,19 @@ export async function middleware(request: NextRequest) {
 		}
 	}
 
-	if (request.nextUrl.pathname.startsWith("/dashboard")) {
+	if (pathname.startsWith("/dashboard")) {
 		if (!user) {
 			return NextResponse.redirect(new URL("/login", request.url));
+		}
+	}
+
+	if (pathname === '/') {
+		return NextResponse.redirect(new URL('/login', request.url))
+	}
+
+	if (pathname === '/login') {
+		if (user) {
+			return NextResponse.redirect(new URL('/admin/dashboard', request.url))
 		}
 	}
 
@@ -68,5 +79,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ["/admin/:path*", "/dashboard/:path*"],
+	matcher: ["/admin/:path*", "/dashboard/:path*", "/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
