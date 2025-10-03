@@ -60,9 +60,9 @@ export async function middleware(request: NextRequest) {
 	}
 
 	if (pathname.startsWith("/dashboard")) {
-		if (!user) {
-			return NextResponse.redirect(new URL("/login", request.url));
-		}
+		// if (!user) {
+		// 	return NextResponse.redirect(new URL("/login", request.url));
+		// }
 	}
 
 	if (pathname === '/') {
