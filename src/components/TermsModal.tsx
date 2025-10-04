@@ -93,6 +93,9 @@ export default function TermsModal({ isOpen, onClose }: TermsModalProps) {
 											Lưu trữ hồ sơ phục vụ công tác thống kê, báo cáo và cải
 											thiện chất lượng tổ chức sự kiện.
 										</li>
+										<li>
+											Thực hiện các hoạt động tiếp thị, chăm sóc khách hàng, giới thiệu sản phẩm, chương trình khuyến mãi từ Công ty TNHH Nước Giải Khát Suntory Pepsico Việt Nam.
+										</li>
 									</ul>
 								</div>
 
@@ -101,22 +104,26 @@ export default function TermsModal({ isOpen, onClose }: TermsModalProps) {
 									<h4 className="font-bold text-gray-900 mb-2">
 										2. Phạm vi sử dụng dữ liệu
 									</h4>
-									<ul className="list-disc pl-6 space-y-2">
+									<p className="mb-3">
+										Dữ liệu cá nhân chỉ được chia sẻ cho đơn vị tổ chức bao gồm:
+									</p>
+									<ul className="list-disc pl-6 space-y-2 mb-3">
 										<li>
-											Dữ liệu cá nhân chỉ được Ban Tổ Chức và các đơn vị liên
-											quan trực tiếp đến sự kiện sử dụng trong phạm vi nêu tại
-											Mục 1.
+											Công ty Cổ phần Truyền Thông NK Central
 										</li>
 										<li>
-											Dữ liệu này{" "}
-											<strong>
-												không được chia sẻ, tiết lộ, chuyển nhượng, buôn bán
-												hoặc cung cấp cho bất kỳ bên thứ ba nào
-											</strong>{" "}
-											ngoài phạm vi nêu trên, trừ trường hợp có yêu cầu từ cơ
-											quan nhà nước có thẩm quyền theo quy định pháp luật.
+											Công ty TNHH Nước Giải Khát Suntory Pepsico Việt Nam.
 										</li>
 									</ul>
+									<p>
+										Dữ liệu này{" "}
+										<strong>
+											không được chia sẻ, tiết lộ, chuyển nhượng, buôn bán
+											hoặc cung cấp cho bất kỳ bên thứ ba nào
+										</strong>{" "}
+										ngoài phạm vi nêu trên, trừ trường hợp có yêu cầu từ cơ
+										quan nhà nước có thẩm quyền theo quy định pháp luật.
+									</p>
 								</div>
 
 								{/* Section 3 */}
@@ -124,19 +131,17 @@ export default function TermsModal({ isOpen, onClose }: TermsModalProps) {
 									<h4 className="font-bold text-gray-900 mb-2">
 										3. Nguyên tắc bảo mật và lưu trữ
 									</h4>
-									<ul className="list-disc pl-6 space-y-2">
-										<li>
-											Ban Tổ Chức cam kết áp dụng các biện pháp quản lý, kỹ
+									<p className="mb-3">
+										Ban Tổ Chức cam kết áp dụng các biện pháp quản lý, kỹ
 											thuật và bảo mật hợp lý để bảo vệ dữ liệu cá nhân khỏi
 											việc truy cập, tiết lộ, sử dụng, thay đổi hoặc phá hủy
 											trái phép.
-										</li>
-										<li>
-											Thời hạn lưu trữ dữ liệu: không vượt quá thời gian cần
+									</p>
+									<p>
+										Thời hạn lưu trữ dữ liệu: không vượt quá thời gian cần
 											thiết để hoàn thành các mục đích nêu tại Mục 1, trừ khi
 											pháp luật có quy định khác.
-										</li>
-									</ul>
+									</p>
 								</div>
 
 								{/* Section 4 */}
@@ -168,18 +173,29 @@ export default function TermsModal({ isOpen, onClose }: TermsModalProps) {
 									<h4 className="font-bold text-gray-900 mb-2">
 										5. Cam kết của Người tham dự
 									</h4>
-									<ul className="list-disc pl-6 space-y-2">
-										<li>
-											Bằng việc cung cấp dữ liệu cá nhân và tham gia sự kiện,
-											Người tham dự xác nhận đã đọc, hiểu rõ và đồng ý với toàn
-											bộ các điều khoản nêu trên.
-										</li>
-										<li>
-											Người tham dự cam kết cung cấp thông tin chính xác và
-											chịu trách nhiệm về tính trung thực của thông tin đã cung
-											cấp.
-										</li>
-									</ul>
+									<p className="mb-3">
+										Bằng việc cung cấp dữ liệu cá nhân và tham gia sự kiện,
+										Người tham dự xác nhận đã đọc, hiểu rõ và đồng ý với toàn
+										bộ các điều khoản nêu trên.
+									</p>
+									<p>
+										Người tham dự cam kết cung cấp thông tin chính xác và
+										chịu trách nhiệm về tính trung thực của thông tin đã cung
+										cấp.
+									</p>
+								</div>
+
+								{/* Section 6 */}
+								<div>
+									<h4 className="font-bold text-gray-900 mb-2">
+										6. Cam kết của Đơn vị tổ chức
+									</h4>
+									<p className="mb-3">
+										Công ty Cổ phần Truyền Thông NK Central và Công ty TNHH Nước Giải Khát Suntory Pepsico Việt Nam cam kết áp dụng các biện pháp kỹ thuật và tổ chức phù hợp nhằm đảm bảo dữ liệu cá nhân của Người dùng được bảo mật, an toàn, không bị truy cập trái phép, tiết lộ, sửa đổi hoặc phá hủy.
+									</p>
+									<p>
+										Mọi vi phạm sẽ được xử lý theo quy định của pháp luật Việt Nam.
+									</p>
 								</div>
 							</div>
 						</div>
