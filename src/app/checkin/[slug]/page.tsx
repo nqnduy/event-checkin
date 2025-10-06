@@ -116,7 +116,6 @@ export default function EventCheckinPage() {
 					.from("events")
 					.select("*")
 					.eq("slug", slug)
-					.eq('status', 'active')
 					.single();
 
 				if (!eventData) {
@@ -268,7 +267,7 @@ export default function EventCheckinPage() {
 		<>
 			<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
 				<div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full">
-					{eventInfo && (
+					{eventInfo && eventInfo.status === "active" && (
 						<div className="mb-6 p-4 bg-blue-50 rounded-lg">
 							<h2 className="font-bold text-blue-900">
 								{eventInfo.event_name}
@@ -281,97 +280,106 @@ export default function EventCheckinPage() {
 						</div>
 					)}
 
-					<h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-						Đăng ký tham gia sự kiện
-					</h1>
+					{eventInfo && eventInfo.status === "active" && (
+						<h1 className="text-3xl font-bold text-center mb-8 text-gray-800">Đăng ký tham gia sự kiện</h1>
+					)}
+					{eventInfo && eventInfo.status === "completed" && (
+						<h1 className="text-3xl font-bold text-center text-gray-800">Sự kiện đã kết thúc, không thể đăng ký</h1>
+					)}
+					{eventInfo && eventInfo.status === "cancelled" && (
+						<h1 className="text-3xl font-bold text-center text-gray-800">Sự kiện đã bị hủy, không thể đăng ký</h1>
+					)}
+					{eventInfo && eventInfo.status === "active" && (
+						<>
+							<form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										Họ và tên *
+									</label>
+									<input
+										{...register("full_name")}
+										type="text"
+										placeholder="Nguyễn Văn A"
+										className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									/>
+									{errors.full_name && (
+										<p className="mt-1 text-sm text-red-600">
+											{errors.full_name.message}
+										</p>
+									)}
+								</div>
 
-					<form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-2">
-								Họ và tên *
-							</label>
-							<input
-								{...register("full_name")}
-								type="text"
-								placeholder="Nguyễn Văn A"
-								className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-							/>
-							{errors.full_name && (
-								<p className="mt-1 text-sm text-red-600">
-									{errors.full_name.message}
-								</p>
-							)}
-						</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										Số điện thoại *
+									</label>
+									<input
+										{...register("phone_number")}
+										type="tel"
+										placeholder="0901234567"
+										maxLength={10}
+										className="w-full px-4 py-3 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									/>
+									{errors.phone_number && (
+										<p className="mt-1 text-sm text-red-600">
+											{errors.phone_number.message}
+										</p>
+									)}
+								</div>
 
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-2">
-								Số điện thoại *
-							</label>
-							<input
-								{...register("phone_number")}
-								type="tel"
-								placeholder="0901234567"
-								maxLength={10}
-								className="w-full px-4 py-3 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-							/>
-							{errors.phone_number && (
-								<p className="mt-1 text-sm text-red-600">
-									{errors.phone_number.message}
-								</p>
-							)}
-						</div>
+								<div className="flex items-start">
+									<input
+										{...register("terms_accepted")}
+										type="checkbox"
+										id="terms"
+										className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+									/>
+									<label
+										htmlFor="terms"
+										className="ml-2 text-sm text-gray-600">
+										Tôi đã đọc và đồng ý với{" "}
+											<button
+											type="button"
+											onClick={() => setIsTermsModalOpen(true)}
+											className="text-blue-600 cursor-pointer hover:underline font-medium"
+										>
+											điều khoản chia sẻ dữ liệu
+										</button>
+									</label>
+								</div>
+								{errors.terms_accepted && (
+									<p className="text-sm text-red-600">
+										{errors.terms_accepted.message}
+									</p>
+								)}
 
-						<div className="flex items-start">
-							<input
-								{...register("terms_accepted")}
-								type="checkbox"
-								id="terms"
-								className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-							/>
-							<label
-								htmlFor="terms"
-								className="ml-2 text-sm text-gray-600">
-								Tôi đã đọc và đồng ý với{" "}
-									<button
-									type="button"
-									onClick={() => setIsTermsModalOpen(true)}
-									className="text-blue-600 cursor-pointer hover:underline font-medium"
-								>
-									điều khoản chia sẻ dữ liệu
+								<button
+									type="submit"
+									disabled={isSubmitting}
+									className="w-full py-3 px-4 cursor-pointer bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center">
+									{isSubmitting ? (
+										<>
+											<Loader2 className="animate-spin mr-2 h-5 w-5" />
+											Đang xử lý...
+										</>
+									) : (
+										"Đăng ký"
+									)}
 								</button>
-							</label>
-						</div>
-						{errors.terms_accepted && (
-							<p className="text-sm text-red-600">
-								{errors.terms_accepted.message}
-							</p>
-						)}
+							</form>
 
-						<button
-							type="submit"
-							disabled={isSubmitting}
-							className="w-full py-3 px-4 cursor-pointer bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center">
-							{isSubmitting ? (
-								<>
-									<Loader2 className="animate-spin mr-2 h-5 w-5" />
-									Đang xử lý...
-								</>
-							) : (
-								"Đăng ký"
-							)}
-						</button>
-					</form>
-
-					<div className="mt-6 pt-6 border-t border-gray-200">
-						<p className="text-xs text-center text-gray-500">
-							Mỗi thiết bị chỉ có thể đăng ký một lần cho sự kiện này
-						</p>
-						{process.env.NODE_ENV === 'development' && (
-							<p className="text-xs text-center text-orange-500 mt-2">
-								🔧 Dev mode: Multiple check-ins allowed from localhost
-							</p>
-						)}
-					</div>
+							<div className="mt-6 pt-6 border-t border-gray-200">
+								<p className="text-xs text-center text-gray-500">
+									Mỗi thiết bị chỉ có thể đăng ký một lần cho sự kiện này
+								</p>
+								{process.env.NODE_ENV === 'development' && (
+									<p className="text-xs text-center text-orange-500 mt-2">
+										🔧 Dev mode: Multiple check-ins allowed from localhost
+									</p>
+								)}
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 			<TermsModal
