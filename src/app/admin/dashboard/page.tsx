@@ -50,7 +50,7 @@ export default async function AdminDashboard() {
 		.from("event_checkins")
 		.select("*")
 		.order("checked_in_at", { ascending: false })
-		.limit(500); // Tăng limit để lấy nhiều data hơn
+		.limit(1000); // Tăng limit để lấy nhiều data hơn
 
 	// Fetch events
 	const { data: events } = await supabase

@@ -15,7 +15,7 @@ export default async function ExternalDashboard() {
 		.from("event_checkins")
 		.select("id, encrypted_name, encrypted_phone, event_id, terms_accepted, checked_in_at")
 		.order("checked_in_at", { ascending: false })
-		.limit(500);
+		.limit(1000);
 
 	// Fetch events
 	const { data: events } = await supabase

@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Event, EventStats } from "@/types/event";
 import { EventStatsCard } from "@/components/admin/EventStatsCard";
@@ -41,6 +41,10 @@ export default function ExternalDashboardClient({
 	const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 	const [eventStats, setEventStats] = useState<EventStats | null>(initialStats as unknown as EventStats);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+
+	// Pagination state
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 100;
 
 	const supabase = createClient();
 
@@ -118,6 +122,17 @@ export default function ExternalDashboardClient({
 	const filteredCheckins = selectedEventId
 		? checkins.filter((c) => c.event_id === selectedEventId)
 		: checkins;
+
+	// Pagination logic
+	const totalPages = Math.ceil(filteredCheckins.length / itemsPerPage);
+	const startIndex = (currentPage - 1) * itemsPerPage;
+	const endIndex = startIndex + itemsPerPage;
+	const paginatedCheckins = filteredCheckins.slice(startIndex, endIndex);
+
+	// Reset to first page when filter changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [selectedEventId]);
 
 	const loadEvents = async () => {
 		const { data } = await supabase
@@ -368,7 +383,7 @@ export default function ExternalDashboardClient({
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200">
-								{filteredCheckins.map((checkin, index) => {
+								{paginatedCheckins.map((checkin, index) => {
 									const event = events.find(
 										(e) => e.id === checkin.event_id
 									);
@@ -382,7 +397,7 @@ export default function ExternalDashboardClient({
 											key={checkin.id}
 											className="hover:bg-gray-50 transition-colors">
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-												{index + 1}
+												{startIndex + index + 1}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 												{format(
@@ -414,7 +429,7 @@ export default function ExternalDashboardClient({
 							</tbody>
 						</table>
 
-						{filteredCheckins.length === 0 && (
+						{paginatedCheckins.length === 0 && (
 							<div className="text-center py-8 text-gray-500">
 								{selectedEventId
 									? "Chưa có check-in cho event này"
@@ -423,6 +438,83 @@ export default function ExternalDashboardClient({
 						)}
 					</div>
 				</div>
+
+				{/* Pagination */}
+				{filteredCheckins.length > 0 && (
+					<div className="bg-white px-6 py-4 border-t border-gray-200">
+						<div className="flex items-center justify-between">
+							{/* Pagination Info */}
+							<div className="text-sm text-gray-700">
+								Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredCheckins.length)} trong tổng số {filteredCheckins.length} kết quả
+							</div>
+
+							{/* Pagination Controls */}
+							<div className="flex items-center space-x-2">
+								<button
+									onClick={() => setCurrentPage(1)}
+									disabled={currentPage === 1}
+									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									Đầu
+								</button>
+								<button
+									onClick={() => setCurrentPage(currentPage - 1)}
+									disabled={currentPage === 1}
+									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+								>
+									<ChevronLeft className="w-4 h-4" />
+									Trước
+								</button>
+
+								{/* Page Numbers */}
+								<div className="flex items-center space-x-1">
+									{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+										let pageNum;
+										if (totalPages <= 5) {
+											pageNum = i + 1;
+										} else if (currentPage <= 3) {
+											pageNum = i + 1;
+										} else if (currentPage >= totalPages - 2) {
+											pageNum = totalPages - 4 + i;
+										} else {
+											pageNum = currentPage - 2 + i;
+										}
+
+										return (
+											<button
+												key={pageNum}
+												onClick={() => setCurrentPage(pageNum)}
+												className={`px-3 py-2 text-sm font-medium rounded-md ${
+													currentPage === pageNum
+														? 'bg-blue-600 text-white'
+														: 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+												}`}
+											>
+												{pageNum}
+											</button>
+										);
+									})}
+								</div>
+
+								<button
+									onClick={() => setCurrentPage(currentPage + 1)}
+									disabled={currentPage === totalPages}
+									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+								>
+									Sau
+									<ChevronRight className="w-4 h-4" />
+								</button>
+								<button
+									onClick={() => setCurrentPage(totalPages)}
+									disabled={currentPage === totalPages}
+									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									Cuối
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);
