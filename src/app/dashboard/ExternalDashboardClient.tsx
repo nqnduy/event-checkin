@@ -511,72 +511,151 @@ export default function ExternalDashboardClient({
 					<div className="bg-white px-6 py-4 border-t border-gray-200">
 						<div className="flex items-center justify-between">
 							{/* Pagination Info */}
-							<div className="text-sm text-gray-700">
+							<div className="text-sm text-gray-700 hidden md:block">
 								Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredCheckins.length)} trong tổng số {filteredCheckins.length} kết quả
 							</div>
 
 							{/* Pagination Controls */}
-							<div className="flex items-center space-x-2">
+							<div className="flex items-center space-x-1 md:space-x-2">
+								{/* First Page - Desktop */}
 								<button
 									onClick={() => setCurrentPage(1)}
 									disabled={currentPage === 1}
-									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									className="hidden md:block px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Đầu
 								</button>
+								{/* First Page - Mobile Icon */}
+								<button
+									onClick={() => setCurrentPage(1)}
+									disabled={currentPage === 1}
+									className="md:hidden p-2 text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									title="Trang đầu"
+								>
+									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+									</svg>
+								</button>
+
+								{/* Previous Page - Desktop */}
 								<button
 									onClick={() => setCurrentPage(currentPage - 1)}
 									disabled={currentPage === 1}
-									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+									className="hidden md:flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									<ChevronLeft className="w-4 h-4" />
 									Trước
 								</button>
+								{/* Previous Page - Mobile Icon */}
+								<button
+									onClick={() => setCurrentPage(currentPage - 1)}
+									disabled={currentPage === 1}
+									className="md:hidden p-2 text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									title="Trang trước"
+								>
+									<ChevronLeft className="w-4 h-4" />
+								</button>
 
 								{/* Page Numbers */}
 								<div className="flex items-center space-x-1">
-									{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-										let pageNum;
-										if (totalPages <= 5) {
-											pageNum = i + 1;
-										} else if (currentPage <= 3) {
-											pageNum = i + 1;
-										} else if (currentPage >= totalPages - 2) {
-											pageNum = totalPages - 4 + i;
-										} else {
-											pageNum = currentPage - 2 + i;
-										}
+									{/* Mobile: Show max 3 pages */}
+									<div className="md:hidden flex items-center space-x-1">
+										{Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+											let pageNum;
+											if (totalPages <= 3) {
+												pageNum = i + 1;
+											} else if (currentPage <= 2) {
+												pageNum = i + 1;
+											} else if (currentPage >= totalPages - 1) {
+												pageNum = totalPages - 2 + i;
+											} else {
+												pageNum = currentPage - 1 + i;
+											}
 
-										return (
-											<button
-												key={pageNum}
-												onClick={() => setCurrentPage(pageNum)}
-												className={`px-3 py-2 text-sm font-medium rounded-md ${
-													currentPage === pageNum
-														? 'bg-blue-600 text-white'
-														: 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-												}`}
-											>
-												{pageNum}
-											</button>
-										);
-									})}
+											return (
+												<button
+													key={pageNum}
+													onClick={() => setCurrentPage(pageNum)}
+													className={`px-2 py-2 text-sm font-medium rounded-md ${
+														currentPage === pageNum
+															? 'bg-blue-600 text-white'
+															: 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+													}`}
+												>
+													{pageNum}
+												</button>
+											);
+										})}
+									</div>
+
+									{/* Desktop: Show max 5 pages */}
+									<div className="hidden md:flex items-center space-x-1">
+										{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+											let pageNum;
+											if (totalPages <= 5) {
+												pageNum = i + 1;
+											} else if (currentPage <= 3) {
+												pageNum = i + 1;
+											} else if (currentPage >= totalPages - 2) {
+												pageNum = totalPages - 4 + i;
+											} else {
+												pageNum = currentPage - 2 + i;
+											}
+
+											return (
+												<button
+													key={pageNum}
+													onClick={() => setCurrentPage(pageNum)}
+													className={`px-3 py-2 text-sm font-medium rounded-md ${
+														currentPage === pageNum
+															? 'bg-blue-600 text-white'
+															: 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+													}`}
+												>
+													{pageNum}
+												</button>
+											);
+										})}
+									</div>
 								</div>
 
+								{/* Next Page - Desktop */}
 								<button
 									onClick={() => setCurrentPage(currentPage + 1)}
 									disabled={currentPage === totalPages}
-									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+									className="hidden md:flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Sau
 									<ChevronRight className="w-4 h-4" />
 								</button>
+								{/* Next Page - Mobile Icon */}
+								<button
+									onClick={() => setCurrentPage(currentPage + 1)}
+									disabled={currentPage === totalPages}
+									className="md:hidden p-2 text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									title="Trang sau"
+								>
+									<ChevronRight className="w-4 h-4" />
+								</button>
+
+								{/* Last Page - Desktop */}
 								<button
 									onClick={() => setCurrentPage(totalPages)}
 									disabled={currentPage === totalPages}
-									className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									className="hidden md:block px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Cuối
+								</button>
+								{/* Last Page - Mobile Icon */}
+								<button
+									onClick={() => setCurrentPage(totalPages)}
+									disabled={currentPage === totalPages}
+									className="md:hidden p-2 text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									title="Trang cuối"
+								>
+									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+									</svg>
 								</button>
 							</div>
 						</div>

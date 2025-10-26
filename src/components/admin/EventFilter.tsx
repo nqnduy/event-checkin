@@ -91,7 +91,7 @@ export function EventFilter({
 										e.stopPropagation(); // Ngăn trigger event select
 										onEditEvent(event);
 									}}
-									className="ml-2 p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+									className="ml-2 p-1 hover:bg-gray-200 rounded group-hover:opacity-100 transition-opacity cursor-pointer"
 									aria-label="Edit event">
 									<Edit2 className="w-4 h-4 text-gray-600" />
 								</div>
