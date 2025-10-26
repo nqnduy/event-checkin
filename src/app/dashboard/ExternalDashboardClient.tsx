@@ -435,9 +435,9 @@ export default function ExternalDashboardClient({
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										STT
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										Thời gian check-in
-									</th>
+									</th> */}
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										Họ và tên (đã mã hóa)
 									</th>
@@ -466,7 +466,7 @@ export default function ExternalDashboardClient({
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 												{startIndex + index + 1}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+											{/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 												{format(
 													new Date(
 														checkin.checked_in_at
@@ -474,7 +474,7 @@ export default function ExternalDashboardClient({
 													"dd/MM/yyyy HH:mm:ss",
 													{ locale: vi }
 												)}
-											</td>
+											</td> */}
 											<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
 												{maskedName}
 											</td>

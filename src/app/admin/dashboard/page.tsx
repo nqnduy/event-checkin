@@ -46,7 +46,14 @@ export default async function AdminDashboard() {
 	}
 
 	// Fetch checkins data with pagination
-	let allCheckins = [];
+	let allCheckins: Array<{
+		id: number;
+		full_name: string;
+		phone_number: string;
+		checked_in_at: string;
+		terms_accepted: boolean;
+		event_id?: number;
+	}> = [];
 	let from = 0;
 	const pageSize = 1000;
 	let hasMore = true;

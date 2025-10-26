@@ -129,17 +129,6 @@ export function EventStatsCard({ stats, isLoading, showFullData = false }: Event
 					</div>
 				)}
 			</div>
-
-			{/* Today's checkins */}
-			{stats.today_checkins > 0 && (
-				<div className="mt-3 text-sm text-gray-600">
-					Hôm nay:{" "}
-					<span className="font-semibold">
-						{stats.today_checkins}
-					</span>{" "}
-					check-ins
-				</div>
-			)}
 		</div>
 	);
 }
