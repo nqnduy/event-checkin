@@ -14,8 +14,9 @@ const editEventSchema = z.object({
 	event_date: z.string().min(1, "Vui lòng chọn ngày tổ chức"),
 	target_checkins: z
 		.number()
-		.min(1, "Target phải lớn hơn 0")
+		.min(0, "Target phải lớn hơn hoặc bằng 0")
 		.max(100000, "Target không được vượt quá 100,000"),
+	display_limit: z.any().optional(),
 	description: z.string().optional(),
 	status: z.enum(["active", "completed", "cancelled"]),
 });
@@ -52,6 +53,7 @@ export function EditEventModal({
 			setValue("event_name", event.event_name);
 			setValue("event_date", event.event_date);
 			setValue("target_checkins", event.target_checkins);
+			setValue("display_limit", event.display_limit !== null ? event.display_limit : "");
 			setValue("description", event.description || "");
 			setValue("status", event.status);
 		}
@@ -62,12 +64,22 @@ export function EditEventModal({
 		setIsSubmitting(true);
 
 		try {
+			// Process display_limit
+			let displayLimit = null;
+			if (data.display_limit !== undefined && data.display_limit !== "" && !isNaN(Number(data.display_limit))) {
+				const num = Number(data.display_limit);
+				if (num < 0) throw new Error("Giới hạn hiển thị phải lớn hơn hoặc bằng 0");
+				if (num > 100000) throw new Error("Giới hạn hiển thị không được vượt quá 100,000");
+				displayLimit = num;
+			}
+
 			const { error } = await supabase
 				.from("events")
 				.update({
 					event_name: data.event_name,
 					event_date: data.event_date,
 					target_checkins: data.target_checkins,
+					display_limit: displayLimit,
 					description: data.description || null,
 					status: data.status,
 					updated_at: new Date().toISOString(),
@@ -161,6 +173,31 @@ export function EditEventModal({
 						{errors.target_checkins && (
 							<p className="mt-1 text-sm text-red-600">
 								{errors.target_checkins.message}
+							</p>
+						)}
+					</div>
+
+					{/* Display Limit */}
+					<div>
+						<label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+							<Target className="w-4 h-4" />
+							Giới hạn hiển thị số người đăng ký
+						</label>
+						<input
+							{...register("display_limit", {
+								valueAsNumber: true,
+							})}
+							type="number"
+							min="0"
+							placeholder="Để trống nếu không giới hạn"
+							className="w-full px-4 py-2 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+						/>
+						<p className="mt-1 text-xs text-gray-500">
+							Số người tối đa hiển thị trong dashboard (không ảnh hưởng đến số người thực tế đăng ký)
+						</p>
+						{errors.display_limit && (
+							<p className="mt-1 text-sm text-red-600">
+								{String(errors.display_limit.message)}
 							</p>
 						)}
 					</div>

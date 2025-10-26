@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -63,71 +63,52 @@ export default function AdminDashboardClient({
 	const selectedEvent = events.find((e) => e.id === selectedEventId);
 	const supabase = createClient();
 
-	// Load event stats when selected event changes
-	useEffect(() => {
-		let isMounted = true;
-		const fetchStats = async () => {
-			if (isMounted) {
-				await loadEventStats();
-			}
-		};
+	// Load checkins with pagination
+	const loadCheckins = useCallback(async (eventId?: number | null) => {
+		try {
+			let allCheckins: CheckinData[] = [];
+			let from = 0;
+			const pageSize = 1000;
+			let hasMore = true;
 
-		fetchStats();
+			while (hasMore) {
+				let query = supabase
+					.from("event_checkins")
+					.select("*")
+					.order("checked_in_at", { ascending: false })
+					.range(from, from + pageSize - 1);
 
-		return () => {
-			isMounted = false;
-		};
-	}, [selectedEventId]);
-
-	// Real-time subscription
-	useEffect(() => {
-		let isMounted = true;
-		const channel = supabase
-			.channel("admin-checkins")
-			.on(
-				"postgres_changes",
-				{
-					event: "INSERT",
-					schema: "public",
-					table: "event_checkins",
-				},
-				(payload) => {
-					if (!isMounted) return;
-
-					const newCheckin = payload.new as CheckinData;
-					setCheckins((prev) => [newCheckin, ...prev]);
-
-					// Update stats if new checkin is for selected event
-					if (
-						!selectedEventId ||
-						newCheckin.event_id === selectedEventId
-					) {
-						loadEventStats();
-					}
-
-					toast.success(`New check-in: ${newCheckin.full_name}`);
+				if (eventId) {
+					query = query.eq("event_id", eventId);
 				}
-			)
-			.subscribe();
 
-		return () => {
-			isMounted = false;
-			supabase.removeChannel(channel);
-		};
-	}, [selectedEventId, supabase]);
+				const { data: batch, error } = await query;
 
-	// Load events
-	const loadEvents = async () => {
-		const { data } = await supabase
-			.from("events")
-			.select("*")
-			.order("event_date", { ascending: false });
+				if (error) {
+					console.error("Error fetching checkins:", error);
+					break;
+				}
 
-		if (data) setEvents(data);
-	};
+				if (!batch || batch.length === 0) {
+					hasMore = false;
+				} else {
+					allCheckins = [...allCheckins, ...batch];
+					if (batch.length < pageSize) {
+						hasMore = false;
+					}
+					from += pageSize;
+				}
+			}
+
+			setCheckins(allCheckins);
+			console.log(`Loaded ${allCheckins.length} checkins for event: ${eventId || 'all'}`);
+		} catch (error) {
+			console.error("Error in loadCheckins:", error);
+		}
+	}, [supabase]);
 
 	// Load event statistics
-	const loadEventStats = async () => {
+	const loadEventStats = useCallback(async () => {
 		try {
 			if (!selectedEventId) {
 				// Load overall stats if no event selected
@@ -138,7 +119,7 @@ export default function AdminDashboardClient({
 				}
 
 				if (data && data.length > 0) {
-					// Aggregate all events stats
+					// Aggregate all events stats (admin sees real numbers)
 					const totalStats: EventStats = {
 						event_id: 0,
 						event_name: "Tất cả Events",
@@ -183,6 +164,86 @@ export default function AdminDashboardClient({
 		} catch (error) {
 			console.error("Unexpected error in loadEventStats:", error);
 		}
+	}, [selectedEventId, supabase]);
+
+	// Load initial data
+	useEffect(() => {
+		let isMounted = true;
+		const fetchInitialData = async () => {
+			if (isMounted) {
+				await loadCheckins(selectedEventId);
+			}
+		};
+
+		fetchInitialData();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [loadCheckins, selectedEventId]);
+
+	// Load event stats and checkins when selected event changes
+	useEffect(() => {
+		let isMounted = true;
+		const fetchData = async () => {
+			if (isMounted) {
+				await loadEventStats();
+				await loadCheckins(selectedEventId);
+			}
+		};
+
+		fetchData();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [selectedEventId, loadEventStats, loadCheckins]);
+
+	// Real-time subscription
+	useEffect(() => {
+		let isMounted = true;
+		const channel = supabase
+			.channel("admin-checkins")
+			.on(
+				"postgres_changes",
+				{
+					event: "INSERT",
+					schema: "public",
+					table: "event_checkins",
+				},
+				(payload) => {
+					if (!isMounted) return;
+
+					const newCheckin = payload.new as CheckinData;
+					setCheckins((prev) => [newCheckin, ...prev]);
+
+					// Update stats if new checkin is for selected event
+					if (
+						!selectedEventId ||
+						newCheckin.event_id === selectedEventId
+					) {
+						loadEventStats();
+					}
+
+					toast.success(`New check-in: ${newCheckin.full_name}`);
+				}
+			)
+			.subscribe();
+
+		return () => {
+			isMounted = false;
+			supabase.removeChannel(channel);
+		};
+	}, [selectedEventId, supabase, loadEventStats]);
+
+	// Load events
+	const loadEvents = async () => {
+		const { data } = await supabase
+			.from("events")
+			.select("*")
+			.order("event_date", { ascending: false });
+
+		if (data) setEvents(data);
 	};
 
 	// Manual refresh
@@ -191,25 +252,8 @@ export default function AdminDashboardClient({
 		setIsRefreshing(true);
 
 		try {
-			// Reload checkins
-			let query = supabase
-				.from("event_checkins")
-				.select("*")
-				.order("checked_in_at", { ascending: false });
-
-			if (selectedEventId) {
-				query = query.eq("event_id", selectedEventId);
-			}
-
-			const { data, error } = await query;
-
-			if (error) {
-				console.error("Error loading checkins:", error);
-				if (isMounted) toast.error("Lỗi khi tải dữ liệu check-in");
-				return;
-			}
-
-			if (data && isMounted) setCheckins(data);
+			// Reload checkins with pagination
+			await loadCheckins(selectedEventId);
 
 			// Reload events and stats
 			if (isMounted) {
@@ -229,10 +273,8 @@ export default function AdminDashboardClient({
 		};
 	};
 
-	// Filter checkins by selected event
-	const filteredCheckins = selectedEventId
-		? checkins.filter((c) => c.event_id === selectedEventId)
-		: checkins;
+	// Use checkins directly since they're already filtered by selectedEventId
+	const filteredCheckins = checkins;
 
 	// Pagination logic
 	const totalPages = Math.ceil(filteredCheckins.length / itemsPerPage);
@@ -362,7 +404,7 @@ export default function AdminDashboardClient({
 					{/* Event Statistics */}
 					{eventStats && (
 						<div className="mb-6">
-							<EventStatsCard stats={eventStats} />
+							<EventStatsCard stats={eventStats} showFullData={true} />
 						</div>
 					)}
 				</div>

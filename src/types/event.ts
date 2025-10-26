@@ -5,6 +5,7 @@ export interface Event {
   event_date: string
   slug: string
   target_checkins: number
+  display_limit?: number
   description?: string
   status: 'active' | 'completed' | 'cancelled'
   created_at: string
@@ -17,6 +18,7 @@ export interface EventStats {
   event_name: string
   total_checkins: number
   target_checkins: number
+  display_limit?: number
   completion_percentage: number
   today_checkins: number
 }
@@ -25,6 +27,7 @@ export interface CreateEventData {
   event_name: string
   event_date: string
   target_checkins: number
+  display_limit?: number
   description?: string
 }
 
@@ -32,6 +35,7 @@ export interface UpdateEventData {
   event_name?: string
   event_date?: string
   target_checkins?: number
+  display_limit?: number
   description?: string
   status?: 'active' | 'completed' | 'cancelled'
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { decryptData, maskPhoneNumber, maskName } from "@/lib/encryption";
 import { format } from "date-fns";
@@ -37,7 +37,7 @@ export default function ExternalDashboardClient({
 	initialStats,
 }: ExternalDashboardClientProps) {
 	const [checkins, setCheckins] = useState(initialData);
-	const [events, setEvents] = useState(initialEvents);
+	const [events] = useState(initialEvents);
 	const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 	const [eventStats, setEventStats] = useState<EventStats | null>(initialStats as unknown as EventStats);
 	const [isRefreshing, setIsRefreshing] = useState(false);
@@ -48,103 +48,52 @@ export default function ExternalDashboardClient({
 
 	const supabase = createClient();
 
-	// Load event stats when selected event changes
-	useEffect(() => {
-		let isMounted = true;
-		const fetchStats = async () => {
-			if (isMounted) {
-				await loadEventStats();
-			}
-		};
-
-		fetchStats();
-
-		return () => {
-			isMounted = false;
-		};
-	}, [selectedEventId]);
-
-	// Real-time subscription
-	useEffect(() => {
-		let isMounted = true;
-		const channel = supabase
-			.channel("external-checkins")
-			.on(
-				"postgres_changes",
-				{
-					event: "INSERT",
-					schema: "public",
-					table: "event_checkins",
-				},
-				(payload) => {
-					if (!isMounted) return;
-
-					const newCheckin = payload.new as EncryptedCheckinData;
-					setCheckins((prev) => [newCheckin, ...prev]);
-
-					// Update stats if new checkin is for selected event
-					if (
-						!selectedEventId ||
-						newCheckin.event_id === selectedEventId
-					) {
-						loadEventStats();
-					}
-
-					toast.success("Có check-in mới!");
-				}
-			)
-			.subscribe();
-
-		return () => {
-			isMounted = false;
-			supabase.removeChannel(channel);
-		};
-	}, [selectedEventId, supabase]);
-
-	// Decrypt and mask data for display
-	const getMaskedData = (encrypted_name: string, encrypted_phone: string) => {
+	// Load checkins with pagination and display_limit
+	const loadCheckins = useCallback(async (eventId?: number | null) => {
 		try {
-			const name = decryptData(encrypted_name);
-			const phone = decryptData(encrypted_phone);
-			return {
-				maskedName: maskName(name),
-				maskedPhone: maskPhoneNumber(phone),
-			};
+			let allCheckins: EncryptedCheckinData[] = [];
+			let from = 0;
+			const pageSize = 1000;
+			let hasMore = true;
+
+			while (hasMore) {
+				let query = supabase
+					.from("event_checkins")
+					.select("id, encrypted_name, encrypted_phone, event_id, terms_accepted, checked_in_at")
+					.order("checked_in_at", { ascending: false })
+					.range(from, from + pageSize - 1);
+
+				if (eventId) {
+					query = query.eq("event_id", eventId);
+				}
+
+				const { data: batch, error } = await query;
+
+				if (error) {
+					console.error("Error fetching checkins:", error);
+					break;
+				}
+
+				if (!batch || batch.length === 0) {
+					hasMore = false;
+				} else {
+					allCheckins = [...allCheckins, ...batch];
+					if (batch.length < pageSize) {
+						hasMore = false;
+					}
+					from += pageSize;
+				}
+			}
+
+			setCheckins(allCheckins);
+			console.log(`Loaded ${allCheckins.length} checkins for event: ${eventId || 'all'}`);
 		} catch (error) {
-			return {
-				maskedName: "***",
-				maskedPhone: "***",
-			};
+			console.error("Error in loadCheckins:", error);
 		}
-	};
-
-	// Filter by date
-	const filteredCheckins = selectedEventId
-		? checkins.filter((c) => c.event_id === selectedEventId)
-		: checkins;
-
-	// Pagination logic
-	const totalPages = Math.ceil(filteredCheckins.length / itemsPerPage);
-	const startIndex = (currentPage - 1) * itemsPerPage;
-	const endIndex = startIndex + itemsPerPage;
-	const paginatedCheckins = filteredCheckins.slice(startIndex, endIndex);
-
-	// Reset to first page when filter changes
-	useEffect(() => {
-		setCurrentPage(1);
-	}, [selectedEventId]);
-
-	const loadEvents = async () => {
-		const { data } = await supabase
-			.from("events")
-			.select("*")
-			.order("event_date", { ascending: false });
-
-		if (data) setEvents(data);
-	};
+	}, [supabase]);
 
 	// Load event statistics
-	const loadEventStats = async () => {
+	const loadEventStats = useCallback(async () => {
 		try {
 			if (!selectedEventId) {
 				// Load overall stats if no event selected
@@ -155,13 +104,18 @@ export default function ExternalDashboardClient({
 				}
 
 				if (data && data.length > 0) {
-					// Aggregate all events stats
+					// Aggregate all events stats with display_limit consideration
 					const totalStats: EventStats = {
 						event_id: 0,
 						event_name: "Tất cả Events",
 						total_checkins: data.reduce(
-							(sum: number, e: EventStats) =>
-								sum + Number(e.total_checkins),
+							(sum: number, e: EventStats) => {
+								// Use display_limit if available, otherwise use total_checkins
+								const eventCheckins = (e.display_limit !== null && e.display_limit !== undefined)
+									? Math.min(Number(e.total_checkins), e.display_limit)
+									: Number(e.total_checkins);
+								return sum + eventCheckins;
+							},
 							0
 						),
 						target_checkins: data.reduce(
@@ -200,7 +154,137 @@ export default function ExternalDashboardClient({
 		} catch (error) {
 			console.error("Unexpected error in loadEventStats:", error);
 		}
+	}, [selectedEventId, supabase]);
+
+	// Load initial data
+	useEffect(() => {
+		let isMounted = true;
+		const fetchInitialData = async () => {
+			if (isMounted) {
+				await loadCheckins(selectedEventId);
+			}
+		};
+
+		fetchInitialData();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [loadCheckins, selectedEventId]);
+
+	// Load event stats and checkins when selected event changes
+	useEffect(() => {
+		let isMounted = true;
+		const fetchData = async () => {
+			if (isMounted) {
+				await loadEventStats();
+				await loadCheckins(selectedEventId);
+			}
+		};
+
+		fetchData();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [selectedEventId, loadEventStats, loadCheckins]);
+
+	// Real-time subscription
+	useEffect(() => {
+		let isMounted = true;
+		const channel = supabase
+			.channel("external-checkins")
+			.on(
+				"postgres_changes",
+				{
+					event: "INSERT",
+					schema: "public",
+					table: "event_checkins",
+				},
+				(payload) => {
+					if (!isMounted) return;
+
+					const newCheckin = payload.new as EncryptedCheckinData;
+					setCheckins((prev) => [newCheckin, ...prev]);
+
+					// Update stats if new checkin is for selected event
+					if (
+						!selectedEventId ||
+						newCheckin.event_id === selectedEventId
+					) {
+						loadEventStats();
+					}
+
+					toast.success("Có check-in mới!");
+				}
+			)
+			.subscribe();
+
+		return () => {
+			isMounted = false;
+			supabase.removeChannel(channel);
+		};
+	}, [selectedEventId, supabase, loadEventStats]);
+
+	// Decrypt and mask data for display
+	const getMaskedData = (encrypted_name: string, encrypted_phone: string) => {
+		try {
+			const name = decryptData(encrypted_name);
+			const phone = decryptData(encrypted_phone);
+			return {
+				maskedName: maskName(name),
+				maskedPhone: maskPhoneNumber(phone),
+			};
+		} catch {
+			return {
+				maskedName: "***",
+				maskedPhone: "***",
+			};
+		}
 	};
+
+	// Apply display_limit to checkins (data is already filtered by event)
+	const filteredCheckins = (() => {
+		// Apply display_limit for each event
+		if (selectedEventId) {
+			// For specific event, apply its display_limit
+			const selectedEvent = events.find(e => e.id === selectedEventId);
+			if (selectedEvent?.display_limit !== null && selectedEvent?.display_limit !== undefined) {
+				return checkins.slice(0, selectedEvent.display_limit);
+			}
+			return checkins;
+		} else {
+			// For all events, apply display_limit per event
+			const eventCheckinCounts: { [eventId: number]: number } = {};
+			return checkins.filter((checkin) => {
+				const eventId = checkin.event_id;
+				if (!eventId) return true;
+
+				const event = events.find(e => e.id === eventId);
+				if (event?.display_limit === null || event?.display_limit === undefined) return true;
+
+				// Count checkins for this event
+				eventCheckinCounts[eventId] = (eventCheckinCounts[eventId] || 0) + 1;
+
+				// Only include if under display_limit
+				return eventCheckinCounts[eventId] <= event.display_limit;
+			});
+		}
+	})();
+
+	// Pagination logic
+	const totalPages = Math.ceil(filteredCheckins.length / itemsPerPage);
+	const startIndex = (currentPage - 1) * itemsPerPage;
+	const endIndex = startIndex + itemsPerPage;
+	const paginatedCheckins = filteredCheckins.slice(startIndex, endIndex);
+
+	// Reset to first page when filter changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [selectedEventId]);
+
+	// Events are passed as props, no need to fetch
+
 
 	// Manual refresh
 	const handleRefresh = async () => {
@@ -208,28 +292,11 @@ export default function ExternalDashboardClient({
 		setIsRefreshing(true);
 
 		try {
-			let query = supabase
-				.from("event_checkins")
-				.select("id, encrypted_name, encrypted_phone, event_id, terms_accepted, checked_in_at")
-				.order("checked_in_at", { ascending: false });
+			// Reload checkins with pagination
+			await loadCheckins(selectedEventId);
 
-			if (selectedEventId) {
-				query = query.eq("event_id", selectedEventId);
-			}
-
-			const { data, error } = await query;
-
-			if (error) {
-				console.error("Error loading checkins:", error);
-				if (isMounted) toast.error("Lỗi khi tải dữ liệu check-in");
-				return;
-			}
-
-			if (data && isMounted) setCheckins(data);
-
-			// Reload events and stats
+			// Reload stats only (events are from props)
 			if (isMounted) {
-				await loadEvents();
 				await loadEventStats();
 				toast.success("Dữ liệu đã được cập nhật");
 			}

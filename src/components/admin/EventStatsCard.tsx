@@ -6,9 +6,10 @@ import { EventStats } from "@/types/event";
 interface EventStatsCardProps {
 	stats: EventStats | null;
 	isLoading?: boolean;
+	showFullData?: boolean; // For admin dashboard - show real numbers without display_limit
 }
 
-export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
+export function EventStatsCard({ stats, isLoading, showFullData = false }: EventStatsCardProps) {
 	if (isLoading) {
 		return (
 			<div className="bg-white rounded-xl shadow-sm p-6 animate-pulse">
@@ -27,8 +28,14 @@ export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
 		);
 	}
 
-	const progressPercentage = Math.min(stats.completion_percentage, 100);
-	const isOverTarget = stats.total_checkins > stats.target_checkins;
+	// Use display_limit if available and not showing full data, otherwise use total_checkins
+	const displayCheckins = (showFullData || stats.display_limit === null || stats.display_limit === undefined)
+		? stats.total_checkins
+		: Math.min(stats.total_checkins, stats.display_limit);
+	const progressPercentage = (showFullData || stats.display_limit === null || stats.display_limit === undefined)
+		? Math.min(stats.completion_percentage, 100)
+		: Math.min((displayCheckins / stats.target_checkins) * 100, 100);
+	const isOverTarget = displayCheckins > stats.target_checkins;
 	return (
 		<div className="bg-white rounded-xl shadow-sm p-6">
 			<h3 className="text-lg font-bold text-gray-800 mb-4">
@@ -42,9 +49,11 @@ export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
 						<Users className="w-8 h-8 text-blue-600" />
 					</div>
 					<p className="text-2xl font-bold text-gray-900">
-						{stats.total_checkins?.toLocaleString()}
+						{displayCheckins?.toLocaleString()}
 					</p>
-					<p className="text-sm text-gray-500">Đã check-in</p>
+					<p className="text-sm text-gray-500">
+						Đã check-in
+					</p>
 				</div>
 
 				{/* Target */}
@@ -99,14 +108,14 @@ export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
 					<div className="bg-green-50 border border-green-200 rounded-lg p-3">
 						<p className="text-green-800 text-sm font-medium">
 							🎉 Xuất sắc! Đã vượt target{" "}
-							{stats.total_checkins - stats.target_checkins} người
+							{displayCheckins - stats.target_checkins} người
 						</p>
 					</div>
-				) : stats.completion_percentage >= 80 ? (
+				) : progressPercentage >= 80 ? (
 					<div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
 						<p className="text-blue-800 text-sm font-medium">
 							📈 Sắp đạt target! Còn{" "}
-							{stats.target_checkins - stats.total_checkins} người
+							{stats.target_checkins - displayCheckins} người
 							nữa
 						</p>
 					</div>
@@ -114,7 +123,7 @@ export function EventStatsCard({ stats, isLoading }: EventStatsCardProps) {
 					<div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
 						<p className="text-gray-700 text-sm">
 							Cần thêm{" "}
-							{stats.target_checkins - stats.total_checkins} người
+							{stats.target_checkins - displayCheckins} người
 							để đạt target
 						</p>
 					</div>

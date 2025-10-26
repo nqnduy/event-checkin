@@ -45,12 +45,37 @@ export default async function AdminDashboard() {
 		redirect("/dashboard");
 	}
 
-	// Fetch checkins data
-	const { data: checkins } = await supabase
-		.from("event_checkins")
-		.select("*")
-		.order("checked_in_at", { ascending: false })
-		.limit(1000); // Tăng limit để lấy nhiều data hơn
+	// Fetch checkins data with pagination
+	let allCheckins = [];
+	let from = 0;
+	const pageSize = 1000;
+	let hasMore = true;
+
+	while (hasMore) {
+		const { data: batch, error } = await supabase
+			.from("event_checkins")
+			.select("*")
+			.order("checked_in_at", { ascending: false })
+			.range(from, from + pageSize - 1);
+
+		if (error) {
+			console.error("Error fetching checkins:", error);
+			break;
+		}
+
+		if (!batch || batch.length === 0) {
+			hasMore = false;
+		} else {
+			allCheckins = [...allCheckins, ...batch];
+			if (batch.length < pageSize) {
+				hasMore = false;
+			}
+			from += pageSize;
+		}
+	}
+
+	const checkins = allCheckins;
+	console.log(`Total checkins fetched: ${checkins.length}`);
 
 	// Fetch events
 	const { data: events } = await supabase

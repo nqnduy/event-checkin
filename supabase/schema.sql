@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   event_name TEXT NOT NULL,
   event_date DATE NOT NULL,
   target_checkins INTEGER DEFAULT 0,
+  display_limit INTEGER,
   description TEXT,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -91,6 +92,7 @@ RETURNS TABLE (
   event_name TEXT,
   total_checkins BIGINT,
   target_checkins INTEGER,
+  display_limit INTEGER,
   completion_percentage NUMERIC,
   today_checkins BIGINT
 )
@@ -104,6 +106,7 @@ BEGIN
     e.event_name,
     COUNT(ec.id)::BIGINT as total_checkins,
     e.target_checkins,
+    e.display_limit,
     CASE
       WHEN e.target_checkins > 0
       THEN ROUND((COUNT(ec.id)::NUMERIC / e.target_checkins::NUMERIC * 100), 2)
@@ -113,7 +116,7 @@ BEGIN
   FROM public.events e
   LEFT JOIN public.event_checkins ec ON e.id = ec.event_id
   WHERE (p_event_id IS NULL OR e.id = p_event_id)
-  GROUP BY e.id, e.event_name, e.target_checkins;
+  GROUP BY e.id, e.event_name, e.target_checkins, e.display_limit;
 END;
 $$;
 
