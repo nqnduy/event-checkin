@@ -17,7 +17,6 @@ interface EncryptedCheckinData {
 	id: number;
 	encrypted_name: string;
 	encrypted_phone: string;
-	checked_in_at: string;
 	terms_accepted: boolean;
 	event_id?: number;
 }
@@ -59,7 +58,7 @@ export default function ExternalDashboardClient({
 			while (hasMore) {
 				let query = supabase
 					.from("event_checkins")
-					.select("id, encrypted_name, encrypted_phone, event_id, terms_accepted, checked_in_at")
+					.select("id, encrypted_name, encrypted_phone, event_id, terms_accepted")
 					.order("checked_in_at", { ascending: false })
 					.range(from, from + pageSize - 1);
 
@@ -325,11 +324,6 @@ export default function ExternalDashboardClient({
 				STT: index + 1,
 				"Họ và tên (đã mã hóa)": maskedName,
 				"Số điện thoại (đã mã hóa)": maskedPhone,
-				"Thời gian check-in": format(
-					new Date(item.checked_in_at),
-					"dd/MM/yyyy HH:mm:ss",
-					{ locale: vi }
-				),
 				"Đã đồng ý điều khoản": item.terms_accepted ? "Có" : "Không",
 			};
 		});
