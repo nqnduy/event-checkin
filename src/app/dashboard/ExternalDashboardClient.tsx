@@ -332,13 +332,31 @@ export default function ExternalDashboardClient({
 		const wb = XLSX.utils.book_new();
 
 		if (eventStats) {
+			// Calculate display checkins based on display_limit
+			const displayCheckins = (() => {
+				if (selectedEventId) {
+					const selectedEvent = events.find(e => e.id === selectedEventId);
+					if (selectedEvent?.display_limit !== null && selectedEvent?.display_limit !== undefined) {
+						return Math.min(eventStats.total_checkins, selectedEvent.display_limit);
+					}
+					return eventStats.total_checkins;
+				} else {
+					// For all events, use the aggregated display checkins from eventStats
+					return eventStats.total_checkins; // This is already calculated with display_limit in loadEventStats
+				}
+			})();
+
+			// Calculate completion percentage based on display checkins
+			const displayCompletionPercentage = eventStats.target_checkins > 0
+				? Math.min((displayCheckins / eventStats.target_checkins) * 100, 100)
+				: 0;
+
 			const summaryData = [
 				{
 					Event: eventStats.event_name,
-					"Tổng check-in": eventStats.total_checkins,
+					"Tổng check-in": displayCheckins,
 					Target: eventStats.target_checkins,
-					"Đạt được (%)": eventStats.completion_percentage.toFixed(2),
-					"Check-in hôm nay": eventStats.today_checkins,
+					"Đạt được (%)": displayCompletionPercentage.toFixed(2),
 					"Ngày export": format(new Date(), "dd/MM/yyyy HH:mm:ss", {
 						locale: vi,
 					}),
